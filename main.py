@@ -1,4 +1,3 @@
-import markdown
 from flask import Flask, render_template, request, redirect, jsonify, flash
 from collections import defaultdict
 import pickle
@@ -551,6 +550,7 @@ def checkout():
         for mov_data in movements_data:
             product_id = mov_data['productId']
             qty = int(mov_data['quantity'])
+            print(qty)
 
             # Find the movement with the largest quantity for this product
             from_movement = max(
@@ -572,13 +572,6 @@ def checkout():
                 )
                 write_counter(counter_file, counter)
                 movements.append(new_movement)
-
-                # Update the original movement's quantity
-                from_movement.qty = int(from_movement.qty) - qty  # Convert qty to integer before subtraction
-                if from_movement.qty <= 0:
-                    movements.remove(from_movement)
-                else:
-                    from_movement.qty = str(from_movement.qty)  # Convert back to string if needed
 
         save_to_pkl(movements, movement_file)
         return jsonify({"success": True})
@@ -622,4 +615,4 @@ if __name__ == "__main__":
         remove = Location(location_id='Remove')  # Option to remove inventory
         locations.append(remove)
     save_to_pkl(locations, location_file)
-    app.run(debug=True)
+    app.run(debug=False)
