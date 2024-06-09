@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>Shopping Cart</title>
+{% endblock %}
+
+{% block content %}
+<div id="printableArea">
+    <div class="container mt-4">
+        <h2 class="mb-4">Shopping Cart</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="cart-items">
+                {% for movement in movements %}
+                <tr>
+                    {% set i = 0 %}
+                    <td>{{ movement.movement_id }}</td>
+                    <td>{{ movement.product_id }}</td>
+                    <td>{{ movement.price }}</td>
+                    <td>
+                        <select name="quantity-{{ movement.qty }}" onchange="updateTotal(this)">
+                            {% for i in range(0, movement.qty | int + 1) %}
+                            <option value="{{ i }}">{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    {% set subtotal = (i|int * movement.price|float)|round(2) %}
+                    <td>{{ subtotal }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="text-right">
+            <h4>Subtotal: $<span id="subtotal">0.00</span></h4>
+            <h4>Tax (7%): $<span id="tax">0.00</span></h4>
+            <h3>Total: $<span id="total">0.00</span></h3>
+            <button class="btn btn-primary" onclick="printReceipt()" id="checkout-button">Checkout</button>
+            <button class="btn btn-warning" onclick="window.print()">Print Receipt</button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addToCartModal" tabindex="-1" role="dialog" aria-labelledby="addToCartModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addToCartModalLabel">Add to Cart</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="add-to-cart-form">
+              <div class="form-group">
+                <label for="product-name">Product Name</label>
+                <input type="text" class="form-control" id="product-name" readonly>
+              </div>
+              <div class="form-group">
+                <label for="product-price">Price</label>
+                <input type="text" class="form-control" id="product-price" readonly>
+              </div>
+              <div class="form-group">
+                <label for="product-quantity">Quantity</label>
+                <input type="number" class="form-control" id="product-quantity" value="1" min="1">
+              </div>
+              <button type="submit" class="btn btn-primary">Add to Cart</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+<script>
+    function updateTotal(select) {
+        var quantity = select.value;
+        var price = parseFloat(select.parentElement.previousElementSibling.innerText);
+        var total = (quantity * price).toFixed(2);
+        select.parentElement.nextElementSibling.innerText = total;
+
+        // Update subtotal
+        document.getElementById('subtotal').innerText = (parseFloat(document.getElementById('subtotal').innerText) + parseInt(total)).toFixed(2);
+        var subtotal = parseFloat(document.getElementById('subtotal').innerText);
+
+        // Update tax
+        var tax = (subtotal * 0.07).toFixed(2);
+        document.getElementById('tax').innerText = tax;
+
+        // Update total
+        var totalAmount = (subtotal + parseFloat(tax)).toFixed(2);
+        document.getElementById('total').innerText = totalAmount;
+    }
+
+    function printReceipt() {
+        // Move items
+        var movements = [];
+        var rows = document.querySelectorAll('#cart-items tr');
+        rows.forEach(row => {
+            var productId = row.children[1].innerText;
+            var quantity = row.querySelector('select').value;
+            movements.push({ productId, quantity });
+        });
+
+        fetch('/checkout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ movements }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Checkout successful!');
+                window.location.href = '/';
+            } else {
+                alert('There was an issue with checkout: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error processing your request.');
+        });
+    }
+</script>
+{% endblock %}
